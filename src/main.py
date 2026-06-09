@@ -1,10 +1,14 @@
 # src/main.py
+
 import json
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import Optional, List
 import uvicorn
+import os
+import sys
 
+sys.path.insert(0, os.path.dirname(__file__))
 from evaluater import evaluate
 from reporter import generate_report
 
