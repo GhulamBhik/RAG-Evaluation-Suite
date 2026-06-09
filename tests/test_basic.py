@@ -4,12 +4,13 @@ import os
 import sys
 import pytest
 from unittest.mock import patch
+from pathlib import Path
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
+ROOT = Path(__file__).resolve().parents[1]
 
+sys.path.insert(0, str(ROOT))           
+sys.path.insert(0, str(ROOT / "src"))   
 
-print("CWD:", os.getcwd())
-print("PATH:", sys.path)
 
 from reporter import generate_report
 from run_benchmark import (
