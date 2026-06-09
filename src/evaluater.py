@@ -76,37 +76,3 @@ def evaluate(case: dict) -> dict:
         "answer": case["answer"],
         "evaluation": evaluation
     }
-
-# test_evaluator.py (delete after testing)
-
-# from evaluator import evaluate
-
-# single case
-single = {
-    "question": "How many days of annual leave do full-time employees get?",
-    "context": "TechCorp employees are entitled to 20 days of paid annual leave per calendar year.",
-    "answer": "Full-time employees at TechCorp are entitled to 20 days of paid annual leave per calendar year."
-}
-
-print("=== SINGLE CASE ===")
-print(evaluate(single))
-
-# multiple cases
-cases = [
-    {
-        "id": 1,
-        "question": "How many days of annual leave do full-time employees get?",
-        "context": "TechCorp employees are entitled to 20 days of paid annual leave per calendar year.",
-        "answer": "Full-time employees at TechCorp are entitled to 20 days of paid annual leave per calendar year."
-    },
-    {
-        "id": 2,
-        "question": "How many days of annual leave do full-time employees get?",
-        "context": "TechCorp employees are entitled to 20 days of paid annual leave per calendar year.",
-        "answer": "Full-time employees at TechCorp are entitled to 90 days of paid annual leave per calendar year."
-    }
-]
-
-print("\n=== MULTIPLE CASES ===")
-for case in cases:
-    print(evaluate(case))
