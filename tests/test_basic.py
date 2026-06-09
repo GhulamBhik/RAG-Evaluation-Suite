@@ -7,6 +7,10 @@ from unittest.mock import patch
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
+
+print("CWD:", os.getcwd())
+print("PATH:", sys.path)
+
 from reporter import generate_report
 from run_benchmark import (
     format_cases_for_api,
