@@ -97,7 +97,7 @@ def get_evaluation(case_id: str):
         """,
         (case_id,)
     ).fetchone()
-    print(row)
+
     conn.close()
 
     if not row:
