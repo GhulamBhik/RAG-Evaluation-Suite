@@ -2,18 +2,45 @@
 import json
 import os
 import sys
+import types
 import pytest
 from unittest.mock import patch
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 
+os.environ.setdefault("GROQ_API_KEY", "test-key")
+
 sys.path.insert(0, str(ROOT))           
+sys.path.insert(0, str(ROOT / "benchmark"))
 sys.path.insert(0, str(ROOT / "src"))   
+
+if "groq" not in sys.modules:
+    groq_module = types.ModuleType("groq")
+
+    class _DummyGroq:
+        def __init__(self, *args, **kwargs):
+            self.chat = types.SimpleNamespace(
+                completions=types.SimpleNamespace(
+                    create=lambda *args, **kwargs: None
+                )
+            )
+
+    groq_module.Groq = _DummyGroq
+    sys.modules["groq"] = groq_module
+
+if "dotenv" not in sys.modules:
+    dotenv_module = types.ModuleType("dotenv")
+
+    def _load_dotenv(*args, **kwargs):
+        return None
+
+    dotenv_module.load_dotenv = _load_dotenv
+    sys.modules["dotenv"] = dotenv_module
 
 
 from reporter import generate_report
-from run_benchmark import (
+from benchmark.run_benchmark import (
     format_cases_for_api,
     enrich_results,
     get_category_summary,
@@ -71,38 +98,37 @@ def test_enrich_results_correct():
     test_cases = [make_test_case(1, "normal", expected_status="pass")]
     results = [{"id": "1", "question": "q", "answer": "a", "evaluation": {"safety_status": "pass"}}]
     enriched = enrich_results(test_cases, results)
-    assert enriched[0]["evaluator_correct"] == True
+    assert enriched[0]["passed"] == True
     assert enriched[0]["expected_safety_status"] == "pass"
 
 def test_enrich_results_incorrect():
     test_cases = [make_test_case(1, "hallucination", expected_status="fail")]
     results = [{"id": "1", "question": "q", "answer": "a", "evaluation": {"safety_status": "pass"}}]
     enriched = enrich_results(test_cases, results)
-    assert enriched[0]["evaluator_correct"] == False
+    assert enriched[0]["passed"] == False
 
 def test_get_category_summary():
     results = [
-        {"type": "normal", "evaluator_correct": True},
-        {"type": "normal", "evaluator_correct": True},
-        {"type": "hallucination", "evaluator_correct": False},
+        {"type": "normal", "passed": True},
+        {"type": "normal", "passed": True},
+        {"type": "hallucination", "passed": False},
     ]
     summary = get_category_summary(results)
     assert summary["normal"]["total"] == 2
-    assert summary["normal"]["correct"] == 2
-    assert summary["hallucination"]["incorrect"] == 1
+    assert summary["normal"]["pass"] == 2
+    assert summary["hallucination"]["pass"] == 0
 
 def test_build_report_accuracy():
     results = [
-        {"type": "normal", "evaluator_correct": True},
-        {"type": "normal", "evaluator_correct": True},
-        {"type": "normal", "evaluator_correct": False},
-        {"type": "normal", "evaluator_correct": False},
+        {"type": "normal", "passed": True},
+        {"type": "normal", "passed": True},
+        {"type": "normal", "passed": False},
+        {"type": "normal", "passed": False},
     ]
     summary = get_category_summary(results)
     report = build_report(results, summary)
-    assert report["correct_predictions"] == 2
-    assert report["incorrect_predictions"] == 2
-    assert report["evaluator_accuracy"] == 50.0
+    assert report["summary"] == summary
+    assert report["results"] == results
 
 
 # ── Dataset integrity tests ───────────────────────────────────────
@@ -151,6 +177,7 @@ def test_api_evaluate_single():
     fake_result = {
         "id": "1",
         "question": "How many days of leave?",
+        "context": "Employees get 20 days.",
         "answer": "20 days",
         "evaluation": {
             "relevance_score": 5,
@@ -173,14 +200,14 @@ def test_api_evaluate_single():
 
     assert response.status_code == 200
     data = response.json()
-    assert "evaluation" in data
-    assert "safety_status" in data["evaluation"]
-    assert "relevance_score" in data["evaluation"]
-    assert "accuracy_score" in data["evaluation"]
-    assert "hallucination_detected" in data["evaluation"]
-    assert "source_supported" in data["evaluation"]
-    assert "comments" in data["evaluation"]
-    assert "guardrail_suggestion" in data["evaluation"]
+    assert "ai_preliminary_evaluation" in data
+    assert "safety_status" in data["ai_preliminary_evaluation"]
+    assert "relevance_score" in data["ai_preliminary_evaluation"]
+    assert "accuracy_score" in data["ai_preliminary_evaluation"]
+    assert "hallucination_detected" in data["ai_preliminary_evaluation"]
+    assert "source_supported" in data["ai_preliminary_evaluation"]
+    assert "comments" in data["ai_preliminary_evaluation"]
+    assert "guardrail_suggestion" in data["ai_preliminary_evaluation"]
 
 def test_api_evaluate_missing_field():
     from fastapi.testclient import TestClient
